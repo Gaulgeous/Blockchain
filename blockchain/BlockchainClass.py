@@ -1,17 +1,12 @@
 class Block:
 
-
-    def __init__(self, prev_hash=None, message=None, pow=None, rewardee=None):
+    def __init__(self, prev_hash=None, message=None, pow=None, next_hash=None):
         self.prev_hash = prev_hash
         self.message = message
         self.pow = pow
-        self.rewardee = rewardee
+        self.next_hash = next_hash
         self.prev = None
         self.next = None
-
-
-    def set_rewardee(self, rewardee):
-        self.rewardee = rewardee
 
 
     def set_pow(self, pow):
@@ -38,8 +33,8 @@ class Block:
         return self.prev_hash
     
 
-    def get_rewardee(self):
-        return self.rewardee
+    def get_next_hash(self):
+        return self.next_hash
     
 
     def set_next(self, next):
@@ -58,7 +53,7 @@ class Block:
         return self.prev
     
 
-class Blockchain:
+class Chain:
 
     def __init__(self):
         self.head = None
@@ -87,17 +82,13 @@ class Blockchain:
             while next.get_next() is not None:
                 next = next.get_next()
 
-            if block.get_prev_hash() is not None:
-                # TODO generate the hashcodes and add them in here. This is not how it should work!!!
-                next.set_next(block)
-                next.set_pow(block.get_prev_hash())
-                block.set_prev(next)
-            else:
-                raise ValueError("Tried to add a new block to the chain without specifying a hash")
+            block.set_prev_hash(next.get_next_hash())
+            block.set_prev(next)
+            next.set_next(block)
 
 
 if __name__=="__main__":
-    chain = Blockchain()
+    chain = Chain()
     block_1 = Block()
     block_2 = Block()
     block_3 = Block()

@@ -5,20 +5,20 @@ from Crypto.PublicKey import RSA
 
 
 def generate_keys():
-    private_key = RSA.generate(1024)
-    public_key = private_key.publickey()
+    public_key = RSA.generate(1024)
+    private_key = public_key.publickey()
 
     return public_key, private_key
 
 
-def sign(message, public_key):
-    cipher = PKCS1_OAEP.new(key=public_key)
+def sign(message, private_key):
+    cipher = PKCS1_OAEP.new(key=private_key)
     signature = cipher.encrypt(message)
     return signature
 
 
-def verify(message, signature, private_key):
-    decrypt = PKCS1_OAEP.new(key=private_key)
+def verify(message, signature, public_key):
+    decrypt = PKCS1_OAEP.new(key=public_key)
     decrypted_message = decrypt.decrypt(signature)
 
     return message == decrypted_message
@@ -49,5 +49,5 @@ def return_proof_of_work(message, zero_score=10):
 if __name__=="__main__":
     public_key, private_key = generate_keys()
     message = "Yes yes I like the poop".encode('utf-8')
-    signature = sign(message, public_key)
-    print(verify(message, signature, private_key))
+    signature = sign(message, private_key)
+    print(verify(message, signature, public_key))
