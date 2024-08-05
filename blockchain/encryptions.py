@@ -1,11 +1,13 @@
 import math
+import time
+import struct
 from Crypto.Hash import SHA256
-from Crypto.PublicKey import ECC
-from Crypto.Signature import DSS
+from Crypto.PublicKey import RSA
+from Crypto.Signature import pkcs1_15
 
 
 def generate_key_pair():
-    private_key = ECC.generate(curve='p256')
+    private_key = RSA.generate(2048)
     public_key = private_key.public_key()
 
     return private_key, public_key
@@ -13,8 +15,11 @@ def generate_key_pair():
 
 def sign(message, private_key):
 
+
+    timestamp = struct.pack("f", time.time())
     hashed_message = SHA256.new(message)
-    signer = DSS.new(private_key, 'fips-186-3')
+    hashed_message.update(timestamp)
+    signer = pkcs1_15.new(private_key)
     signature = signer.sign(hashed_message)
 
     return signature
@@ -22,7 +27,7 @@ def sign(message, private_key):
 
 def verify(message, signature, public_key):
     hashed_message = SHA256.new(message)
-    verifier = DSS.new(public_key, 'fips-186-3')
+    verifier = pkcs1_15.new(public_key)
     try:
         verifier.verify(hashed_message, signature)
         return True
@@ -37,7 +42,7 @@ def return_proof_of_work(message, zero_score=10):
     while True:
         zeros = 0
         digest_message = message + pow.to_bytes(pow.bit_length())
-        hash = sha256(digest_message).digest()
+        hash = SHA256(digest_message).digest()
 
         tracker = 0
         while hash[tracker] == 0:

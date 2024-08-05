@@ -123,18 +123,23 @@ class Server:
                         send_data(message, ADD_ADDRESS, self.client_map[client_name]["socket"])
 
                         message = MESSAGE_DELIMITER.join([client_name, self.client_map[client_name]["public_key"]])
-                        send_data(client_name, ADD_ADDRESS, read_client)
+                        send_data(message, ADD_ADDRESS, read_client)
 
             elif message_type == TRANSACTION:
 
-                # This needs to be rejigged
+                name, signature = message.split(MESSAGE_DELIMITER)
 
-                sender, recipient, amount = message.split(',')
-                message += f",{str(self.transaction_number)}"
-                encoded_transaction = sign(message, self.client_map[sender]["private_key"])
-                transaction_entry = {"sender": sender, "recipient": recipient, "amount": amount, "encoded_transaction": encoded_transaction}
-                self.transaction_buffer.append(transaction_entry)
-                self.transaction_number += 1
+                for client_name, dic in self.client_map.items():
+                    if client_name != name:
+                        send_data(signature, TRANSACTION, self.client_map[client_name]["socket"])
+
+            elif message_type == BLOCK:
+
+                name, block = message.split(MESSAGE_DELIMITER)
+
+                for client_name, dic in self.client_map.items():
+                    if client_name != name:
+                        send_data(block, BLOCK, self.client_map[client_name]["socket"])
 
             if message_type != RECEIVED:
                 send_data(b"RECEIVED", RECEIVED, read_client)
@@ -160,35 +165,6 @@ class Server:
                 for write_client in self.write_clients:
 
                     send_data(name, REMOVE_ADDRESS, write_client)
-
-
-
-    # def check_transaction_buffer(self, write_ready: list[any]) -> None:
-    #     # This has to be ported over to the client side once we have basic communications working
-
-    #     if len(self.transaction_buffer) >= TRANSACTION_BUFFER_LIMIT:
-
-    #         transactions = [entry["encoded_transaction"] for entry in self.transaction_buffer]
-    #         message = TRANSACTION_DELIMITER.join(transactions)
-    #         pow, hash = return_proof_of_work(message, NUM_ZEROS)
-    #         block = Block(pow=pow.to_bytes(pow.bit_length()), message=message, next_hash=hash)
-    #         self.blockchain.add_block(block)
-
-    #         transcript = open("./transcript.txt", "a")
-    #         for entry in self.transaction_buffer:
-    #             transcript.write(f"{entry["sender"]}->{entry["recipient"]} ${entry["amount"]} Transaction ID: {entry["encoded_transaction"]}")
-
-    #         block_chain_message = self.blockchain.to_text()
-
-    #         for write_client in write_ready:
-    #             client_name = None
-    #             for name, dic in self.client_map.items():
-    #                 if dic["socket"] == write_client:
-    #                     client_name = name
-    #             send_data(block_chain_message, BLOCK, self.client_map[client_name]["sequence_number"], write_client)
-    #             self.client_map[client_name]["sequence_number"] += 1
-
-    #         self.transaction_buffer = []
 
 
 

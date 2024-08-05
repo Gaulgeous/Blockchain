@@ -2,7 +2,7 @@ import socket
 import ssl
 import sys
 import time
-from random import randint
+from random import randint, choice
 
 from constants import *
 from encryptions import *
@@ -48,15 +48,14 @@ class Client:
                 print("Error in select function from socket package")
                 break
 
-            # if len(read_ready) > 0:
-                # self.receive_message()
+            if len(read_ready) > 0:
+                self.receive_message()
 
-            # if now - start >= TEST_INTERVAL and len(write_ready) > 0 and len(self.address_book) > 0:
-            #     recipient_index = randint(0, len(self.address_book) - 1)
-            #     recipient = self.address_book[recipient_index]
-            #     amount = min(self.wallet, randint(1, 100))
-            #     self.send_transaction(recipient, amount)
-            #     start = now
+            if now - start >= TEST_INTERVAL and len(write_ready) > 0 and len(self.address_book) > 0:
+                recipient, _ = choice(list(self.address_book.items()))
+                amount = min(self.wallet, randint(1, 100))
+                self.send_transaction(recipient, amount)
+                start = now
 
 
     def update_chain(self, chain: Chain) -> None:
@@ -83,23 +82,25 @@ class Client:
             self.address_book.pop(address)
 
 
-    def send_transaction(self, recipient, amount) -> None:
+    def send_transaction(self, recipient: bytes, amount: int) -> None:
 
             self.wallet -= amount
-            message = MESSAGE_DELIMITER.join([self.name.encode('utf-8'), recipient.encode('utf-8'), bytes(amount)])
+            message = MESSAGE_DELIMITER.join([self.name.encode('utf-8'), recipient, int.to_bytes(amount)])
             signature = sign(message, self.private_key)
 
-            send_data(signature, TRANSACTION, self.socket)
+            message = MESSAGE_DELIMITER.join([self.name.encode('utf-8'), signature])
+
+            send_data(message, TRANSACTION, self.socket)
+
+            print("Sent transaction")
 
 
     def receive_message(self) -> None:
-        # Need to do blockchain encoding individually within the client itself
-        # Handle once things are working on server side
+
         message, message_type, sequence_number = receive_data(self.socket)
 
         if message_type == BLOCK:
-            blockchain = blockchain_from_text(message)
-            blockchain.print_chain()
+            blockchain = blockchain_from_bytes(message)
             self.update_chain(blockchain)
         elif message_type == ADD_ADDRESS:
             self.add_address(message)
@@ -107,9 +108,16 @@ class Client:
             self.remove_address(message)
         elif message_type == RECEIVED:
             print("Message sent and received successfully")
+        elif message_type == TRANSACTION:
+            full = self.chains[0].add_transaction(message)
+            if full:
+                blockchain = self.chains[0].to_bytes()
+                message = MESSAGE_DELIMITER.join([self.name.encode('utf-8'), blockchain])
+                send_data(message, BLOCK, self.socket)
+
 
         if message_type != RECEIVED:
-            send_data(b"RECEIVED", RECEIVED, sequence_number, self.socket)
+            send_data(b"RECEIVED", RECEIVED, self.socket)
 
 
     def send_handshake(self) -> None:
