@@ -1,7 +1,7 @@
 from constants import *
 from encryptions import *
 from Crypto.Hash import SHA256
-from merkle import *
+from merkly.mtree import MerkleTree
 
 
 class Block:
@@ -25,10 +25,8 @@ class Block:
     
 
     def create_tree(self) -> None:
-        self.tree = merkleTree()
-        self.tree.makeTreeFromArray(self.transactions)
-        self.tree.calculateMerkleRoot()
-        self.root = self.tree.getMerkleRoot()
+        self.tree = MerkleTree(self.transactions)
+        self.root = self.tree.root
 
 
     def add_transaction(self, transaction: bytes) -> bool:
